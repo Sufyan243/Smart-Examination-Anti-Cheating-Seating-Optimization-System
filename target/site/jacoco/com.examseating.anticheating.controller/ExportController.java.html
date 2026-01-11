@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExportController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Examination Anti-Cheating System</a> &gt; <a href="index.source.html" class="el_package">com.examseating.anticheating.controller</a> &gt; <span class="el_source">ExportController.java</span></div><h1>ExportController.java</h1><pre class="source lang-java linenums">package com.examseating.anticheating.controller;
+
+import com.examseating.anticheating.dto.ErrorResponse;
+import com.examseating.anticheating.model.ExamHall;
+import com.examseating.anticheating.service.HallManagementService;
+import com.examseating.anticheating.service.PDFExportService;
+import com.examseating.anticheating.service.RiskDetectionService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api/export&quot;)
+@CrossOrigin
+@RequiredArgsConstructor
+<span class="fc" id="L22">@Slf4j</span>
+public class ExportController {
+    
+    private final PDFExportService pdfExportService;
+    private final HallManagementService hallManagementService;
+    private final RiskDetectionService riskDetectionService;
+    
+    @GetMapping(&quot;/pdf/{hallId}&quot;)
+    public ResponseEntity&lt;?&gt; exportToPDF(@PathVariable String hallId) {
+        try {
+<span class="nc" id="L32">            ExamHall hall = hallManagementService.getHallById(hallId);</span>
+<span class="nc bnc" id="L33" title="All 2 branches missed.">            if (hall == null) {</span>
+<span class="nc" id="L34">                return ResponseEntity.notFound().build();</span>
+            }
+            
+<span class="nc" id="L37">            Map&lt;String, Object&gt; riskReport = riskDetectionService.generateRiskReport(hall);</span>
+<span class="nc" id="L38">            byte[] pdfBytes = pdfExportService.generateSeatingChartPDF(hall, riskReport);</span>
+            
+<span class="nc" id="L40">            HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L41">            headers.setContentType(MediaType.APPLICATION_PDF);</span>
+<span class="nc" id="L42">            headers.setContentDispositionFormData(&quot;attachment&quot;, hallId + &quot;_seating_chart.pdf&quot;);</span>
+            
+<span class="nc" id="L44">            return ResponseEntity.ok()</span>
+<span class="nc" id="L45">                    .headers(headers)</span>
+<span class="nc" id="L46">                    .body(pdfBytes);</span>
+                    
+<span class="nc" id="L48">        } catch (IOException e) {</span>
+<span class="nc" id="L49">            log.error(&quot;PDF generation failed for hall {}: {}&quot;, hallId, e.getMessage());</span>
+<span class="nc" id="L50">            return ResponseEntity.internalServerError()</span>
+<span class="nc" id="L51">                    .body(new ErrorResponse(false, &quot;PDF generation failed&quot;, e.getMessage()));</span>
+<span class="nc" id="L52">        } catch (Exception e) {</span>
+<span class="nc" id="L53">            log.error(&quot;Unexpected error during PDF export for hall {}: {}&quot;, hallId, e.getMessage());</span>
+<span class="nc" id="L54">            return ResponseEntity.internalServerError()</span>
+<span class="nc" id="L55">                    .body(new ErrorResponse(false, &quot;Internal server error&quot;, e.getMessage()));</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

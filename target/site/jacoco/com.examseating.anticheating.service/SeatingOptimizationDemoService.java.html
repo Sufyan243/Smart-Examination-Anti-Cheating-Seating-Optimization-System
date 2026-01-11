@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeatingOptimizationDemoService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Examination Anti-Cheating System</a> &gt; <a href="index.source.html" class="el_package">com.examseating.anticheating.service</a> &gt; <span class="el_source">SeatingOptimizationDemoService.java</span></div><h1>SeatingOptimizationDemoService.java</h1><pre class="source lang-java linenums">package com.examseating.anticheating.service;
+
+import com.examseating.anticheating.model.ExamHall;
+import com.examseating.anticheating.model.Student;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Demonstration service showcasing the complete DSA workflow
+ * for exam seating optimization and anti-cheating risk detection
+ */
+@Service
+<span class="fc" id="L17">@Slf4j</span>
+<span class="fc" id="L18">public class SeatingOptimizationDemoService {</span>
+    
+    @Autowired
+    private SeatAllocationService seatAllocationService;
+    
+    @Autowired
+    private RiskDetectionService riskDetectionService;
+    
+    @Autowired
+    private HallManagementService hallManagementService;
+    
+    /**
+     * Demonstrates complete optimization workflow with before/after comparison
+     */
+    public Map&lt;String, Object&gt; demonstrateOptimization(List&lt;Student&gt; students, String hallId, int rows, int cols) {
+<span class="nc" id="L33">        log.info(&quot;Starting seating optimization demonstration for {} students&quot;, students.size());</span>
+        
+        // Step 1: Create exam hall
+<span class="nc" id="L36">        ExamHall hall = hallManagementService.createHall(hallId, rows, cols);</span>
+<span class="nc" id="L37">        log.info(&quot;Created hall {} with capacity {}&quot;, hallId, hall.getCapacity());</span>
+        
+        // Step 2: Generate random baseline seating
+<span class="nc" id="L40">        ExamHall randomHall = new ExamHall(hallId + &quot;_RANDOM&quot;, rows, cols);</span>
+<span class="nc" id="L41">        seatAllocationService.generateRandomSeating(students, randomHall);</span>
+<span class="nc" id="L42">        Map&lt;String, Object&gt; beforeReport = riskDetectionService.generateRiskReport(randomHall);</span>
+        
+<span class="nc" id="L44">        log.info(&quot;Random seating - Risk: {:.2f}%, Conflicts: {}&quot;, </span>
+<span class="nc" id="L45">                beforeReport.get(&quot;totalRiskScore&quot;), beforeReport.get(&quot;totalConflicts&quot;));</span>
+        
+        // Step 3: Apply optimized seating allocation
+<span class="nc" id="L48">        seatAllocationService.allocateSeats(students, hall);</span>
+<span class="nc" id="L49">        Map&lt;String, Object&gt; afterReport = riskDetectionService.generateRiskReport(hall);</span>
+        
+<span class="nc" id="L51">        log.info(&quot;Optimized seating - Risk: {:.2f}%, Conflicts: {}&quot;, </span>
+<span class="nc" id="L52">                afterReport.get(&quot;totalRiskScore&quot;), afterReport.get(&quot;totalConflicts&quot;));</span>
+        
+        // Step 4: Calculate improvement metrics
+<span class="nc" id="L55">        double riskImprovement = (Double) beforeReport.get(&quot;totalRiskScore&quot;) - </span>
+<span class="nc" id="L56">                                (Double) afterReport.get(&quot;totalRiskScore&quot;);</span>
+<span class="nc" id="L57">        int conflictReduction = (Integer) beforeReport.get(&quot;totalConflicts&quot;) - </span>
+<span class="nc" id="L58">                               (Integer) afterReport.get(&quot;totalConflicts&quot;);</span>
+        
+        // Step 5: Compile demonstration results
+<span class="nc" id="L61">        Map&lt;String, Object&gt; demoResults = Map.of(</span>
+<span class="nc" id="L62">            &quot;hallId&quot;, hallId,</span>
+<span class="nc" id="L63">            &quot;studentsCount&quot;, students.size(),</span>
+<span class="nc" id="L64">            &quot;hallCapacity&quot;, hall.getCapacity(),</span>
+<span class="nc" id="L65">            &quot;beforeOptimization&quot;, beforeReport,</span>
+<span class="nc" id="L66">            &quot;afterOptimization&quot;, afterReport,</span>
+<span class="nc" id="L67">            &quot;improvements&quot;, Map.of(</span>
+<span class="nc" id="L68">                &quot;riskReduction&quot;, riskImprovement,</span>
+<span class="nc" id="L69">                &quot;conflictReduction&quot;, conflictReduction,</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">                &quot;improvementPercentage&quot;, riskImprovement &gt; 0 ? </span>
+<span class="nc" id="L71">                    (riskImprovement / (Double) beforeReport.get(&quot;totalRiskScore&quot;)) * 100 : 0.0</span>
+            )
+        );
+        
+<span class="nc" id="L75">        log.info(&quot;Optimization complete - Risk reduced by {:.2f}%, Conflicts reduced by {}&quot;, </span>
+<span class="nc" id="L76">                riskImprovement, conflictReduction);</span>
+        
+<span class="nc" id="L78">        return demoResults;</span>
+    }
+    
+    /**
+     * Demonstrates multi-hall distribution scenario
+     */
+    public Map&lt;String, Object&gt; demonstrateMultiHallDistribution(List&lt;Student&gt; students, 
+                                                               List&lt;Map&lt;String, Integer&gt;&gt; hallConfigs) {
+<span class="nc" id="L86">        log.info(&quot;Starting multi-hall distribution demonstration&quot;);</span>
+        
+        // Create multiple halls
+<span class="nc" id="L89">        List&lt;ExamHall&gt; halls = hallConfigs.stream()</span>
+<span class="nc" id="L90">            .map(config -&gt; hallManagementService.createHall(</span>
+<span class="nc" id="L91">                &quot;HALL_&quot; + config.get(&quot;id&quot;), </span>
+<span class="nc" id="L92">                config.get(&quot;rows&quot;), </span>
+<span class="nc" id="L93">                config.get(&quot;cols&quot;)))</span>
+<span class="nc" id="L94">            .toList();</span>
+        
+        // Distribute students across halls
+<span class="nc" id="L97">        Map&lt;String, List&lt;Student&gt;&gt; distribution = </span>
+<span class="nc" id="L98">            hallManagementService.distributeStudentsAcrossHalls(students, halls);</span>
+        
+        // Apply optimization to each hall and collect results
+<span class="nc" id="L101">        Map&lt;String, Map&lt;String, Object&gt;&gt; hallResults = distribution.entrySet().stream()</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">            .filter(entry -&gt; !&quot;OVERFLOW&quot;.equals(entry.getKey()))</span>
+<span class="nc" id="L103">            .collect(java.util.stream.Collectors.toMap(</span>
+<span class="nc" id="L104">                Map.Entry::getKey,</span>
+<span class="nc" id="L105">                entry -&gt; {</span>
+<span class="nc" id="L106">                    ExamHall hall = hallManagementService.getHallById(entry.getKey());</span>
+<span class="nc" id="L107">                    seatAllocationService.allocateSeats(entry.getValue(), hall);</span>
+<span class="nc" id="L108">                    return riskDetectionService.generateRiskReport(hall);</span>
+                }
+            ));
+        
+        // Compile multi-hall results
+<span class="nc" id="L113">        Map&lt;String, Object&gt; multiHallResults = Map.of(</span>
+<span class="nc" id="L114">            &quot;totalStudents&quot;, students.size(),</span>
+<span class="nc" id="L115">            &quot;totalHalls&quot;, halls.size(),</span>
+<span class="nc" id="L116">            &quot;distribution&quot;, distribution,</span>
+<span class="nc" id="L117">            &quot;hallResults&quot;, hallResults,</span>
+<span class="nc" id="L118">            &quot;overallStatistics&quot;, hallManagementService.getHallStatistics()</span>
+        );
+        
+<span class="nc" id="L121">        log.info(&quot;Multi-hall distribution complete - {} students across {} halls&quot;, </span>
+<span class="nc" id="L122">                students.size(), halls.size());</span>
+        
+<span class="nc" id="L124">        return multiHallResults;</span>
+    }
+    
+    /**
+     * Prints a visual representation of the seating arrangement
+     */
+    public void printSeatingArrangement(ExamHall hall) {
+<span class="nc" id="L131">        log.info(&quot;Seating arrangement for hall {}:&quot;, hall.getHallId());</span>
+        
+<span class="nc" id="L133">        System.out.println(&quot;\n=== SEATING ARRANGEMENT ===&quot;);</span>
+<span class="nc" id="L134">        System.out.println(&quot;Hall: &quot; + hall.getHallId() + &quot; (&quot; + hall.getRows() + &quot;x&quot; + hall.getCols() + &quot;)&quot;);</span>
+<span class="nc" id="L135">        System.out.println();</span>
+        
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        for (int row = 0; row &lt; hall.getRows(); row++) {</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">            for (int col = 0; col &lt; hall.getCols(); col++) {</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">                if (hall.getSeats()[row][col].isOccupied()) {</span>
+<span class="nc" id="L140">                    Student student = hall.getSeats()[row][col].getStudent();</span>
+<span class="nc bnc" id="L141" title="All 3 branches missed.">                    String riskIcon = switch (hall.getSeats()[row][col].getRiskLevel()) {</span>
+<span class="nc" id="L142">                        case SAFE -&gt; &quot;🟩&quot;;</span>
+<span class="nc" id="L143">                        case MEDIUM -&gt; &quot;🟨&quot;;</span>
+<span class="nc" id="L144">                        case HIGH -&gt; &quot;🟥&quot;;</span>
+                    };
+<span class="nc" id="L146">                    System.out.printf(&quot;%s%-8s &quot;, riskIcon, student.getSubject().substring(0, Math.min(3, student.getSubject().length())));</span>
+<span class="nc" id="L147">                } else {</span>
+<span class="nc" id="L148">                    System.out.print(&quot;⬜Empty    &quot;);</span>
+                }
+            }
+<span class="nc" id="L151">            System.out.println();</span>
+        }
+        
+<span class="nc" id="L154">        System.out.println(&quot;\nLegend: 🟩 Safe | 🟨 Medium Risk | 🟥 High Risk | ⬜ Empty&quot;);</span>
+<span class="nc" id="L155">        System.out.println(&quot;========================\n&quot;);</span>
+<span class="nc" id="L156">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

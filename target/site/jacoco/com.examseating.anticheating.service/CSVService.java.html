@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CSVService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Examination Anti-Cheating System</a> &gt; <a href="index.source.html" class="el_package">com.examseating.anticheating.service</a> &gt; <span class="el_source">CSVService.java</span></div><h1>CSVService.java</h1><pre class="source lang-java linenums">package com.examseating.anticheating.service;
+
+import com.examseating.anticheating.exception.*;
+import com.examseating.anticheating.model.Student;
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Service
+<span class="fc" id="L20">@Slf4j</span>
+<span class="fc" id="L21">public class CSVService {</span>
+    
+<span class="fc" id="L23">    @Value(&quot;${csv.max-rows:1000}&quot;)</span>
+    private int maxRows = 1000;
+    
+    public List&lt;Student&gt; parseStudentsFromCSV(MultipartFile file) {
+<span class="fc" id="L27">        log.info(&quot;Parsing students from CSV file: {}&quot;, file.getOriginalFilename());</span>
+        
+<span class="fc" id="L29">        try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {</span>
+<span class="fc" id="L30">            List&lt;String[]&gt; records = reader.readAll();</span>
+            
+<span class="fc bfc" id="L32" title="All 2 branches covered.">            if (records.isEmpty()) {</span>
+<span class="fc" id="L33">                throw new EmptyCSVException();</span>
+            }
+            
+<span class="pc bpc" id="L36" title="1 of 2 branches missed.">            if (records.size() &gt; maxRows + 1) { // +1 for header</span>
+<span class="nc" id="L37">                throw new CSVParsingException(&quot;CSV exceeds maximum allowed rows: &quot; + maxRows);</span>
+            }
+            
+            // Validate header
+<span class="fc" id="L41">            validateCSVStructure(records.get(0));</span>
+            
+<span class="fc" id="L43">            List&lt;Student&gt; students = new ArrayList&lt;&gt;();;</span>
+            
+<span class="fc bfc" id="L45" title="All 2 branches covered.">            for (int i = 1; i &lt; records.size(); i++) {</span>
+<span class="fc" id="L46">                String[] record = records.get(i);</span>
+<span class="fc" id="L47">                validateRow(record, i + 1);</span>
+                
+<span class="fc" id="L49">                Student student = new Student(</span>
+<span class="fc" id="L50">                    record[0].trim(),</span>
+<span class="fc" id="L51">                    record[1].trim(),</span>
+<span class="fc" id="L52">                    record[2].trim()</span>
+                );
+<span class="fc" id="L54">                students.add(student);</span>
+            }
+            
+<span class="fc" id="L57">            checkDuplicateRollNumbers(students);</span>
+            
+<span class="fc" id="L59">            log.info(&quot;Successfully parsed {} students from CSV&quot;, students.size());</span>
+<span class="fc" id="L60">            return students;</span>
+            
+<span class="nc" id="L62">        } catch (IOException e) {</span>
+<span class="nc" id="L63">            log.error(&quot;IO error reading CSV file: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L64">            throw new CSVParsingException(&quot;Error reading CSV file: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L65">        } catch (CsvException e) {</span>
+<span class="nc" id="L66">            log.error(&quot;CSV parsing error: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L67">            throw new CSVParsingException(&quot;Invalid CSV format: &quot; + e.getMessage(), e);</span>
+        }
+    }
+    
+    public void validateCSVStructure(String[] header) {
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (header.length != 3) {</span>
+<span class="fc" id="L73">            throw new InvalidCSVStructureException(&quot;CSV must have exactly 3 columns: RollNo,Name,Subject&quot;);</span>
+        }
+        
+<span class="fc" id="L76">        String[] expectedHeaders = {&quot;rollno&quot;, &quot;name&quot;, &quot;subject&quot;};</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        for (int i = 0; i &lt; header.length; i++) {</span>
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">            if (!header[i].toLowerCase().trim().equals(expectedHeaders[i])) {</span>
+<span class="nc" id="L79">                throw new InvalidCSVStructureException(&quot;Invalid header format. Expected: RollNo,Name,Subject&quot;);</span>
+            }
+        }
+<span class="fc" id="L82">    }</span>
+    
+    public void validateRow(String[] row, int lineNumber) {
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">        if (row.length != 3) {</span>
+<span class="nc" id="L86">            throw new CSVRowValidationException(&quot;Row must have exactly 3 columns&quot;, lineNumber);</span>
+        }
+        
+<span class="fc" id="L89">        String rollNo = row[0].trim();</span>
+<span class="fc" id="L90">        String name = row[1].trim();</span>
+<span class="fc" id="L91">        String subject = row[2].trim();</span>
+        
+<span class="fc bfc" id="L93" title="All 4 branches covered.">        if (rollNo.isEmpty() || !rollNo.matches(&quot;[A-Za-z0-9]+&quot;)) {</span>
+<span class="fc" id="L94">            throw new CSVRowValidationException(&quot;Invalid roll number format (must be alphanumeric)&quot;, lineNumber, &quot;RollNo&quot;);</span>
+        }
+        
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        if (name.isEmpty()) {</span>
+<span class="fc" id="L98">            throw new CSVRowValidationException(&quot;Name cannot be empty&quot;, lineNumber, &quot;Name&quot;);</span>
+        }
+        
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">        if (subject.isEmpty()) {</span>
+<span class="nc" id="L102">            throw new CSVRowValidationException(&quot;Subject cannot be empty&quot;, lineNumber, &quot;Subject&quot;);</span>
+        }
+<span class="fc" id="L104">    }</span>
+    
+    public void checkDuplicateRollNumbers(List&lt;Student&gt; students) {
+<span class="fc" id="L107">        Set&lt;String&gt; rollNumbers = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        for (Student student : students) {</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">            if (!rollNumbers.add(student.getRollNo())) {</span>
+<span class="fc" id="L110">                throw new DuplicateStudentException(student.getRollNo());</span>
+            }
+<span class="fc" id="L112">        }</span>
+<span class="fc" id="L113">    }</span>
+    
+    public byte[] generateSampleCSV() {
+<span class="fc" id="L116">        StringBuilder csv = new StringBuilder();</span>
+<span class="fc" id="L117">        csv.append(&quot;RollNo,Name,Subject\n&quot;);</span>
+<span class="fc" id="L118">        csv.append(&quot;S001,Alice Johnson,Mathematics\n&quot;);</span>
+<span class="fc" id="L119">        csv.append(&quot;S002,Bob Smith,Physics\n&quot;);</span>
+<span class="fc" id="L120">        csv.append(&quot;S003,Charlie Brown,Chemistry\n&quot;);</span>
+<span class="fc" id="L121">        csv.append(&quot;S004,Diana Prince,Biology\n&quot;);</span>
+<span class="fc" id="L122">        csv.append(&quot;S005,Eve Wilson,Computer Science\n&quot;);</span>
+        
+<span class="fc" id="L124">        return csv.toString().getBytes();</span>
+    }
+    
+    public boolean validateCSVFormat(MultipartFile file) {
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">        if (file.isEmpty()) {</span>
+<span class="nc" id="L129">            return false;</span>
+        }
+        
+<span class="fc" id="L132">        String filename = file.getOriginalFilename();</span>
+<span class="pc bpc" id="L133" title="1 of 4 branches missed.">        return filename != null &amp;&amp; filename.toLowerCase().endsWith(&quot;.csv&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

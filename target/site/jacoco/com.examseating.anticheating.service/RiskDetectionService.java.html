@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RiskDetectionService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Examination Anti-Cheating System</a> &gt; <a href="index.source.html" class="el_package">com.examseating.anticheating.service</a> &gt; <span class="el_source">RiskDetectionService.java</span></div><h1>RiskDetectionService.java</h1><pre class="source lang-java linenums">package com.examseating.anticheating.service;
+
+import com.examseating.anticheating.model.ExamHall;
+import com.examseating.anticheating.model.RiskLevel;
+import com.examseating.anticheating.model.Seat;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@Service
+<span class="fc" id="L15">@Slf4j</span>
+public class RiskDetectionService {
+    
+    private final SeatAllocationService seatAllocationService;
+    
+<span class="fc" id="L20">    public RiskDetectionService(SeatAllocationService seatAllocationService) {</span>
+<span class="fc" id="L21">        this.seatAllocationService = seatAllocationService;</span>
+<span class="fc" id="L22">    }</span>
+    
+    /**
+     * Calculates risk for a specific seat based on same-subject neighbors
+     */
+    public void calculateRiskForSeat(Seat[][] seats, int row, int col) {
+<span class="fc" id="L28">        Seat seat = seats[row][col];</span>
+        
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (!seat.isOccupied()) {</span>
+<span class="fc" id="L31">            seat.setRiskLevel(RiskLevel.SAFE);</span>
+<span class="fc" id="L32">            seat.setRiskScore(0.0);</span>
+<span class="fc" id="L33">            return;</span>
+        }
+        
+<span class="fc" id="L36">        List&lt;Seat&gt; neighbors = seatAllocationService.getAdjacentSeats(seats, row, col);</span>
+<span class="fc" id="L37">        int conflictCount = 0;</span>
+        
+<span class="fc" id="L39">        String currentSubject = seat.getStudent().getSubject();</span>
+        
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        for (Seat neighbor : neighbors) {</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">            if (neighbor.isOccupied() &amp;&amp; </span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">                neighbor.getStudent().getSubject().equals(currentSubject)) {</span>
+<span class="fc" id="L44">                conflictCount++;</span>
+            }
+        }
+        
+        // Map conflict count to risk level
+<span class="fc" id="L49">        RiskLevel riskLevel = RiskLevel.fromConflictCount(conflictCount);</span>
+        
+        // Calculate risk score as percentage
+<span class="pc bpc" id="L52" title="1 of 2 branches missed.">        double riskScore = neighbors.isEmpty() ? 0.0 : (double) conflictCount / neighbors.size() * 100;</span>
+        
+<span class="fc" id="L54">        seat.setRiskLevel(riskLevel);</span>
+<span class="fc" id="L55">        seat.setRiskScore(riskScore);</span>
+        
+<span class="fc" id="L57">        log.debug(&quot;Seat ({}, {}) - Subject: {}, Conflicts: {}, Risk: {}, Score: {:.1f}%&quot;, </span>
+<span class="fc" id="L58">                row, col, currentSubject, conflictCount, riskLevel, riskScore);</span>
+<span class="fc" id="L59">    }</span>
+    
+    /**
+     * Calculates risk for all seats in the hall
+     */
+    public void calculateRiskForAllSeats(ExamHall hall) {
+<span class="fc" id="L65">        log.info(&quot;Calculating risk for all seats in hall {}&quot;, hall.getHallId());</span>
+        
+<span class="fc" id="L67">        Seat[][] seats = hall.getSeats();</span>
+        
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        for (int row = 0; row &lt; hall.getRows(); row++) {</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            for (int col = 0; col &lt; hall.getCols(); col++) {</span>
+<span class="fc" id="L71">                calculateRiskForSeat(seats, row, col);</span>
+            }
+        }
+        
+<span class="fc" id="L75">        log.info(&quot;Risk calculation completed for hall {}&quot;, hall.getHallId());</span>
+<span class="fc" id="L76">    }</span>
+    
+    public void calculateRisksForHall(ExamHall hall) {
+<span class="nc" id="L79">        calculateRiskForAllSeats(hall);</span>
+<span class="nc" id="L80">    }</span>
+    
+    /**
+     * Calculates total hall risk as average of all occupied seats
+     */
+    public double calculateTotalHallRisk(ExamHall hall) {
+<span class="fc" id="L86">        Seat[][] seats = hall.getSeats();</span>
+<span class="fc" id="L87">        double totalRisk = 0.0;</span>
+<span class="fc" id="L88">        int occupiedSeats = 0;</span>
+        
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        for (int row = 0; row &lt; hall.getRows(); row++) {</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">            for (int col = 0; col &lt; hall.getCols(); col++) {</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">                if (seats[row][col].isOccupied()) {</span>
+<span class="fc" id="L93">                    totalRisk += seats[row][col].getRiskScore();</span>
+<span class="fc" id="L94">                    occupiedSeats++;</span>
+                }
+            }
+        }
+        
+<span class="pc bpc" id="L99" title="1 of 2 branches missed.">        double averageRisk = occupiedSeats &gt; 0 ? totalRisk / occupiedSeats : 0.0;</span>
+        
+<span class="fc" id="L101">        log.info(&quot;Total hall risk: {:.2f}% (based on {} occupied seats)&quot;, averageRisk, occupiedSeats);</span>
+<span class="fc" id="L102">        return averageRisk;</span>
+    }
+    
+    /**
+     * Generates comprehensive risk report for the hall
+     */
+    public Map&lt;String, Object&gt; generateRiskReport(ExamHall hall) {
+<span class="fc" id="L109">        log.info(&quot;Generating risk report for hall {}&quot;, hall.getHallId());</span>
+        
+        // First calculate risks for all seats
+<span class="fc" id="L112">        calculateRiskForAllSeats(hall);</span>
+        
+<span class="fc" id="L114">        Map&lt;String, Object&gt; report = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L115">        Seat[][] seats = hall.getSeats();</span>
+        
+        // Basic metrics
+<span class="fc" id="L118">        int totalSeats = hall.getCapacity();</span>
+<span class="fc" id="L119">        long occupiedSeats = hall.getOccupiedSeats();</span>
+<span class="fc" id="L120">        double totalRisk = calculateTotalHallRisk(hall);</span>
+        
+        // Risk level distribution
+<span class="fc" id="L123">        int safeCount = 0, mediumCount = 0, highCount = 0;</span>
+<span class="fc" id="L124">        int totalConflicts = 0;</span>
+        
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        for (int row = 0; row &lt; hall.getRows(); row++) {</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">            for (int col = 0; col &lt; hall.getCols(); col++) {</span>
+<span class="fc" id="L128">                Seat seat = seats[row][col];</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">                if (seat.isOccupied()) {</span>
+<span class="pc bpc" id="L130" title="1 of 4 branches missed.">                    switch (seat.getRiskLevel()) {</span>
+<span class="fc" id="L131">                        case SAFE -&gt; safeCount++;</span>
+<span class="fc" id="L132">                        case MEDIUM -&gt; mediumCount++;</span>
+<span class="fc" id="L133">                        case HIGH -&gt; highCount++;</span>
+                    }
+                    
+                    // Count actual conflicts
+<span class="fc" id="L137">                    List&lt;Seat&gt; neighbors = seatAllocationService.getAdjacentSeats(seats, row, col);</span>
+<span class="fc" id="L138">                    String currentSubject = seat.getStudent().getSubject();</span>
+                    
+<span class="fc bfc" id="L140" title="All 2 branches covered.">                    for (Seat neighbor : neighbors) {</span>
+<span class="fc bfc" id="L141" title="All 2 branches covered.">                        if (neighbor.isOccupied() &amp;&amp; </span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">                            neighbor.getStudent().getSubject().equals(currentSubject)) {</span>
+<span class="fc" id="L143">                            totalConflicts++;</span>
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Each conflict is counted twice (once for each seat), so divide by 2
+<span class="fc" id="L151">        totalConflicts = totalConflicts / 2;</span>
+        
+        // Build report
+<span class="fc" id="L154">        report.put(&quot;hallId&quot;, hall.getHallId());</span>
+<span class="fc" id="L155">        report.put(&quot;totalSeats&quot;, totalSeats);</span>
+<span class="fc" id="L156">        report.put(&quot;occupiedSeats&quot;, occupiedSeats);</span>
+<span class="fc" id="L157">        report.put(&quot;availableSeats&quot;, totalSeats - occupiedSeats);</span>
+<span class="pc bpc" id="L158" title="1 of 2 branches missed.">        report.put(&quot;occupancyRate&quot;, occupiedSeats &gt; 0 ? (double) occupiedSeats / totalSeats * 100 : 0.0);</span>
+        
+<span class="fc" id="L160">        report.put(&quot;totalRiskScore&quot;, totalRisk);</span>
+<span class="fc" id="L161">        report.put(&quot;totalConflicts&quot;, totalConflicts);</span>
+        
+        // Risk distribution
+<span class="fc" id="L164">        Map&lt;String, Integer&gt; riskDistribution = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L165">        riskDistribution.put(&quot;safe&quot;, safeCount);</span>
+<span class="fc" id="L166">        riskDistribution.put(&quot;medium&quot;, mediumCount);</span>
+<span class="fc" id="L167">        riskDistribution.put(&quot;high&quot;, highCount);</span>
+<span class="fc" id="L168">        report.put(&quot;riskDistribution&quot;, riskDistribution);</span>
+        
+        // Risk percentages
+<span class="fc" id="L171">        Map&lt;String, Double&gt; riskPercentages = new HashMap&lt;&gt;();</span>
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">        if (occupiedSeats &gt; 0) {</span>
+<span class="fc" id="L173">            riskPercentages.put(&quot;safePercentage&quot;, (double) safeCount / occupiedSeats * 100);</span>
+<span class="fc" id="L174">            riskPercentages.put(&quot;mediumPercentage&quot;, (double) mediumCount / occupiedSeats * 100);</span>
+<span class="fc" id="L175">            riskPercentages.put(&quot;highPercentage&quot;, (double) highCount / occupiedSeats * 100);</span>
+<span class="fc" id="L176">        } else {</span>
+<span class="nc" id="L177">            riskPercentages.put(&quot;safePercentage&quot;, 0.0);</span>
+<span class="nc" id="L178">            riskPercentages.put(&quot;mediumPercentage&quot;, 0.0);</span>
+<span class="nc" id="L179">            riskPercentages.put(&quot;highPercentage&quot;, 0.0);</span>
+        }
+<span class="fc" id="L181">        report.put(&quot;riskPercentages&quot;, riskPercentages);</span>
+        
+<span class="fc" id="L183">        log.info(&quot;Risk report generated: Total Risk: {:.2f}%, Conflicts: {}, Safe: {}, Medium: {}, High: {}&quot;, </span>
+<span class="fc" id="L184">                totalRisk, totalConflicts, safeCount, mediumCount, highCount);</span>
+        
+<span class="fc" id="L186">        return report;</span>
+    }
+    
+    /**
+     * Counts total conflicts in the hall
+     */
+    public int countTotalConflicts(ExamHall hall) {
+<span class="fc" id="L193">        Seat[][] seats = hall.getSeats();</span>
+<span class="fc" id="L194">        int conflicts = 0;</span>
+        
+<span class="fc bfc" id="L196" title="All 2 branches covered.">        for (int row = 0; row &lt; hall.getRows(); row++) {</span>
+<span class="fc bfc" id="L197" title="All 2 branches covered.">            for (int col = 0; col &lt; hall.getCols(); col++) {</span>
+<span class="fc" id="L198">                Seat seat = seats[row][col];</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">                if (seat.isOccupied()) {</span>
+<span class="fc" id="L200">                    List&lt;Seat&gt; neighbors = seatAllocationService.getAdjacentSeats(seats, row, col);</span>
+<span class="fc" id="L201">                    String currentSubject = seat.getStudent().getSubject();</span>
+                    
+<span class="fc bfc" id="L203" title="All 2 branches covered.">                    for (Seat neighbor : neighbors) {</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">                        if (neighbor.isOccupied() &amp;&amp; </span>
+<span class="fc bfc" id="L205" title="All 2 branches covered.">                            neighbor.getStudent().getSubject().equals(currentSubject)) {</span>
+<span class="fc" id="L206">                            conflicts++;</span>
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Each conflict is counted twice, so divide by 2
+<span class="fc" id="L214">        return conflicts / 2;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

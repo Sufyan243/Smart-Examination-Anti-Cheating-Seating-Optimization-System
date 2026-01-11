@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeatingController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Examination Anti-Cheating System</a> &gt; <a href="index.source.html" class="el_package">com.examseating.anticheating.controller</a> &gt; <span class="el_source">SeatingController.java</span></div><h1>SeatingController.java</h1><pre class="source lang-java linenums">package com.examseating.anticheating.controller;
+
+import com.examseating.anticheating.dto.*;
+import com.examseating.anticheating.exception.*;
+import com.examseating.anticheating.model.*;
+import com.examseating.anticheating.service.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping(&quot;/api&quot;)
+@CrossOrigin
+@RequiredArgsConstructor
+@Tag(name = &quot;Seating Management&quot;, description = &quot;APIs for seat allocation, optimization, and risk analysis&quot;)
+public class SeatingController {
+    
+    private final SeatAllocationService seatAllocationService;
+    private final RiskDetectionService riskDetectionService;
+    private final HallManagementService hallManagementService;
+    private final CSVService csvService;
+    
+    @PostMapping(&quot;/seating/upload-csv&quot;)
+    public ResponseEntity&lt;?&gt; uploadCSV(@RequestParam(&quot;file&quot;) MultipartFile file) {
+        try {
+<span class="nc bnc" id="L36" title="All 2 branches missed.">            if (!csvService.validateCSVFormat(file)) {</span>
+<span class="nc" id="L37">                return ResponseEntity.status(415)</span>
+<span class="nc" id="L38">                        .body(new ErrorResponse(false, &quot;Unsupported file type. Only CSV files are allowed.&quot;));</span>
+            }
+            
+<span class="nc bnc" id="L41" title="All 2 branches missed.">            if (file.getSize() &gt; 10 * 1024 * 1024) { // 10MB</span>
+<span class="nc" id="L42">                return ResponseEntity.status(413)</span>
+<span class="nc" id="L43">                        .body(new ErrorResponse(false, &quot;File too large. Maximum size is 10MB.&quot;));</span>
+            }
+            
+<span class="nc" id="L46">            List&lt;Student&gt; students = csvService.parseStudentsFromCSV(file);</span>
+<span class="nc" id="L47">            List&lt;StudentDTO&gt; studentDtos = students.stream()</span>
+<span class="nc" id="L48">                    .map(this::convertToStudentDTO)</span>
+<span class="nc" id="L49">                    .toList();</span>
+            
+<span class="nc" id="L51">            return ResponseEntity.ok(studentDtos);</span>
+            
+<span class="nc" id="L53">        } catch (Exception e) {</span>
+<span class="nc" id="L54">            return ResponseEntity.status(500)</span>
+<span class="nc" id="L55">                    .body(new ErrorResponse(false, &quot;Internal server error: &quot; + e.getMessage()));</span>
+        }
+    }
+    
+    @PostMapping(&quot;/students/upload&quot;)
+    public ResponseEntity&lt;?&gt; uploadStudents(@RequestParam(&quot;file&quot;) MultipartFile file) {
+        try {
+<span class="nc bnc" id="L62" title="All 2 branches missed.">            if (!csvService.validateCSVFormat(file)) {</span>
+<span class="nc" id="L63">                return ResponseEntity.status(415)</span>
+<span class="nc" id="L64">                        .body(new ErrorResponse(false, &quot;Unsupported file type. Only CSV files are allowed.&quot;));</span>
+            }
+            
+<span class="nc bnc" id="L67" title="All 2 branches missed.">            if (file.getSize() &gt; 10 * 1024 * 1024) { // 10MB</span>
+<span class="nc" id="L68">                return ResponseEntity.status(413)</span>
+<span class="nc" id="L69">                        .body(new ErrorResponse(false, &quot;File too large. Maximum size is 10MB.&quot;));</span>
+            }
+            
+<span class="nc" id="L72">            List&lt;Student&gt; students = csvService.parseStudentsFromCSV(file);</span>
+<span class="nc" id="L73">            List&lt;StudentDTO&gt; studentDtos = students.stream()</span>
+<span class="nc" id="L74">                    .map(this::convertToStudentDTO)</span>
+<span class="nc" id="L75">                    .toList();</span>
+            
+<span class="nc" id="L77">            return ResponseEntity.ok(studentDtos);</span>
+            
+<span class="nc" id="L79">        } catch (Exception e) {</span>
+            // Let GlobalExceptionHandler handle specific exceptions
+<span class="nc" id="L81">            throw e;</span>
+        }
+    }
+    
+    @PostMapping(&quot;/students/manual&quot;)
+    public ResponseEntity&lt;String&gt; addStudentsManually(@Valid @RequestBody List&lt;StudentDTO&gt; students) {
+        // This would typically save to a temporary store or session
+        // For now, just return success
+<span class="nc" id="L89">        return ResponseEntity.ok(&quot;Students added successfully&quot;);</span>
+    }
+    
+    @PostMapping(&quot;/halls/create&quot;)
+    public ResponseEntity&lt;ExamHall&gt; createHall(@Valid @RequestBody HallDTO hallDTO) {
+<span class="nc" id="L94">        ExamHall hall = hallManagementService.createHall(hallDTO.getHallId(), hallDTO.getRows(), hallDTO.getCols());</span>
+<span class="nc" id="L95">        return ResponseEntity.ok(hall);</span>
+    }
+    
+    @PostMapping(&quot;/seating/random&quot;)
+    public ResponseEntity&lt;SeatingResponseDTO&gt; generateRandomSeating(@Valid @RequestBody SeatingRequestDTO request) {
+<span class="nc" id="L100">        ExamHall hall = hallManagementService.getHallById(request.getHallId());</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if (hall == null) {</span>
+<span class="nc" id="L102">            throw new HallNotFoundException(request.getHallId(), &quot;random seating generation&quot;);</span>
+        }
+        
+        // Get students by roll numbers (this would typically come from a student service)
+<span class="nc" id="L106">        List&lt;Student&gt; students = request.getStudentIds().stream()</span>
+<span class="nc" id="L107">                .map(rollNo -&gt; new Student(rollNo, &quot;Student &quot; + rollNo, &quot;Subject&quot;))</span>
+<span class="nc" id="L108">                .toList();</span>
+        
+<span class="nc bnc" id="L110" title="All 2 branches missed.">        if (students.size() &gt; hall.getCapacity()) {</span>
+<span class="nc" id="L111">            throw new StudentOverflowException(students.size(), hall.getCapacity());</span>
+        }
+        
+<span class="nc" id="L114">        seatAllocationService.generateRandomSeating(students, hall);</span>
+<span class="nc" id="L115">        riskDetectionService.calculateRisksForHall(hall);</span>
+        
+<span class="nc" id="L117">        return ResponseEntity.ok(buildSeatingResponse(hall));</span>
+    }
+    
+    @PostMapping(&quot;/seating/optimize&quot;)
+    @Operation(summary = &quot;Run greedy seat allocation&quot;, description = &quot;Allocates seats using greedy optimization algorithm&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Seats allocated successfully&quot;)
+    @ApiResponse(responseCode = &quot;404&quot;, description = &quot;Hall not found&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, description = &quot;Student overflow or validation error&quot;)
+    public ResponseEntity&lt;SeatingResponseDTO&gt; optimizeSeating(@Valid @RequestBody SeatingRequestDTO request) {
+<span class="nc" id="L126">        ExamHall hall = hallManagementService.getHallById(request.getHallId());</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">        if (hall == null) {</span>
+<span class="nc" id="L128">            throw new HallNotFoundException(request.getHallId(), &quot;seating optimization&quot;);</span>
+        }
+        
+        // Get students by roll numbers (this would typically come from a student service)
+<span class="nc" id="L132">        List&lt;Student&gt; students = request.getStudentIds().stream()</span>
+<span class="nc" id="L133">                .map(rollNo -&gt; new Student(rollNo, &quot;Student &quot; + rollNo, &quot;Subject&quot;))</span>
+<span class="nc" id="L134">                .toList();</span>
+        
+<span class="nc bnc" id="L136" title="All 2 branches missed.">        if (students.size() &gt; hall.getCapacity()) {</span>
+<span class="nc" id="L137">            throw new StudentOverflowException(students.size(), hall.getCapacity());</span>
+        }
+        
+<span class="nc" id="L140">        seatAllocationService.allocateSeats(students, hall);</span>
+<span class="nc" id="L141">        riskDetectionService.calculateRisksForHall(hall);</span>
+        
+<span class="nc" id="L143">        return ResponseEntity.ok(buildSeatingResponse(hall));</span>
+    }
+    
+    @GetMapping(&quot;/seating/risk/{hallId}&quot;)
+    public ResponseEntity&lt;RiskAnalysisDTO&gt; getRiskAnalysis(@PathVariable String hallId) {
+<span class="nc" id="L148">        ExamHall hall = hallManagementService.getHallById(hallId);</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (hall == null) {</span>
+<span class="nc" id="L150">            throw new HallNotFoundException(hallId, &quot;risk analysis&quot;);</span>
+        }
+        
+<span class="nc" id="L153">        Map&lt;String, Object&gt; riskReport = riskDetectionService.generateRiskReport(hall);</span>
+<span class="nc" id="L154">        RiskAnalysisDTO riskAnalysis = buildRiskAnalysisDTO(hall, riskReport);</span>
+        
+<span class="nc" id="L156">        return ResponseEntity.ok(riskAnalysis);</span>
+    }
+    
+    @GetMapping(&quot;/seating/export/{hallId}&quot;)
+    public ResponseEntity&lt;byte[]&gt; exportPDF(@PathVariable String hallId) {
+        // This endpoint delegates to ExportController for consistency
+        // In a real implementation, you might want to consolidate these
+<span class="nc" id="L163">        return ResponseEntity.status(302)</span>
+<span class="nc" id="L164">                .header(&quot;Location&quot;, &quot;/api/export/pdf/&quot; + hallId)</span>
+<span class="nc" id="L165">                .build();</span>
+    }
+    
+
+
+    // Legacy endpoint for backward compatibility
+    @PostMapping(&quot;/seating/allocate&quot;)
+    public ResponseEntity&lt;SeatAllocationResponse&gt; allocateSeats(@RequestBody SeatAllocationRequest request) {
+        try {
+            // Create or get hall
+<span class="nc" id="L175">            ExamHall hall = hallManagementService.getHallById(request.getHallId());</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">            if (hall == null) {</span>
+<span class="nc" id="L177">                hall = hallManagementService.createHall(request.getHallId(), request.getRows(), request.getCols());</span>
+            }
+            
+            // Convert DTOs to domain objects
+<span class="nc" id="L181">            List&lt;Student&gt; students = request.getStudents().stream()</span>
+<span class="nc" id="L182">                    .map(dto -&gt; new Student(dto.getRollNo(), dto.getName(), dto.getSubject()))</span>
+<span class="nc" id="L183">                    .toList();</span>
+            
+            // Allocate seats
+<span class="nc bnc" id="L186" title="All 2 branches missed.">            if (request.isUseOptimization()) {</span>
+<span class="nc" id="L187">                seatAllocationService.allocateSeats(students, hall);</span>
+<span class="nc" id="L188">            } else {</span>
+<span class="nc" id="L189">                seatAllocationService.generateRandomSeating(students, hall);</span>
+            }
+            
+            // Generate risk report
+<span class="nc" id="L193">            Map&lt;String, Object&gt; riskReport = riskDetectionService.generateRiskReport(hall);</span>
+            
+            // Convert to response DTO
+<span class="nc" id="L196">            SeatAllocationResponse response = new SeatAllocationResponse();</span>
+<span class="nc" id="L197">            response.setHallId(hall.getHallId());</span>
+<span class="nc" id="L198">            response.setSeats(convertToSeatDTOs(hall.getSeats()));</span>
+<span class="nc" id="L199">            response.setRiskReport(riskReport);</span>
+<span class="nc" id="L200">            response.setSuccess(true);</span>
+<span class="nc" id="L201">            response.setMessage(&quot;Seats allocated successfully&quot;);</span>
+            
+<span class="nc" id="L203">            return ResponseEntity.ok(response);</span>
+            
+<span class="nc" id="L205">        } catch (Exception e) {</span>
+<span class="nc" id="L206">            SeatAllocationResponse response = new SeatAllocationResponse();</span>
+<span class="nc" id="L207">            response.setSuccess(false);</span>
+<span class="nc" id="L208">            response.setMessage(&quot;Error: &quot; + e.getMessage());</span>
+<span class="nc" id="L209">            return ResponseEntity.badRequest().body(response);</span>
+        }
+    }
+    
+    // Legacy endpoint moved to /api/students/upload
+    
+    @GetMapping(&quot;/seating/sample-csv&quot;)
+    public ResponseEntity&lt;byte[]&gt; downloadSampleCSV() {
+<span class="nc" id="L217">        byte[] csvContent = csvService.generateSampleCSV();</span>
+        
+<span class="nc" id="L219">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L220">        headers.setContentType(MediaType.TEXT_PLAIN);</span>
+<span class="nc" id="L221">        headers.setContentDispositionFormData(&quot;attachment&quot;, &quot;sample-students.csv&quot;);</span>
+        
+<span class="nc" id="L223">        return ResponseEntity.ok()</span>
+<span class="nc" id="L224">                .headers(headers)</span>
+<span class="nc" id="L225">                .body(csvContent);</span>
+    }
+    
+    private SeatingResponseDTO buildSeatingResponse(ExamHall hall) {
+<span class="nc" id="L229">        Map&lt;String, Object&gt; riskReport = riskDetectionService.generateRiskReport(hall);</span>
+        
+<span class="nc" id="L231">        SeatingResponseDTO response = new SeatingResponseDTO();</span>
+<span class="nc" id="L232">        response.setHallId(hall.getHallId());</span>
+<span class="nc" id="L233">        response.setSeats(convertToSeatDTOs(hall.getSeats()));</span>
+<span class="nc" id="L234">        response.setTotalRiskScore((Double) riskReport.get(&quot;totalRiskScore&quot;));</span>
+<span class="nc" id="L235">        response.setConflictCount((Integer) riskReport.get(&quot;totalConflicts&quot;));</span>
+<span class="nc" id="L236">        response.setOccupiedSeats((Integer) riskReport.get(&quot;occupiedSeats&quot;));</span>
+<span class="nc" id="L237">        response.setCapacity((Integer) riskReport.get(&quot;totalSeats&quot;));</span>
+        
+<span class="nc" id="L239">        return response;</span>
+    }
+    
+    private RiskAnalysisDTO buildRiskAnalysisDTO(ExamHall hall, Map&lt;String, Object&gt; riskReport) {
+<span class="nc" id="L243">        RiskAnalysisDTO dto = new RiskAnalysisDTO();</span>
+<span class="nc" id="L244">        dto.setHallId(hall.getHallId());</span>
+<span class="nc" id="L245">        dto.setTotalRiskScore((Double) riskReport.get(&quot;totalRiskScore&quot;));</span>
+<span class="nc" id="L246">        dto.setConflictCount((Integer) riskReport.get(&quot;totalConflicts&quot;));</span>
+<span class="nc" id="L247">        dto.setOccupiedSeats((Integer) riskReport.get(&quot;occupiedSeats&quot;));</span>
+<span class="nc" id="L248">        dto.setCapacity((Integer) riskReport.get(&quot;totalSeats&quot;));</span>
+        
+        // Count risk levels
+<span class="nc" id="L251">        int safeSeats = 0, mediumRiskSeats = 0, highRiskSeats = 0;</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        for (Seat[] row : hall.getSeats()) {</span>
+<span class="nc bnc" id="L253" title="All 2 branches missed.">            for (Seat seat : row) {</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">                if (seat.isOccupied()) {</span>
+<span class="nc bnc" id="L255" title="All 4 branches missed.">                    switch (seat.getRiskLevel()) {</span>
+<span class="nc" id="L256">                        case SAFE -&gt; safeSeats++;</span>
+<span class="nc" id="L257">                        case MEDIUM -&gt; mediumRiskSeats++;</span>
+<span class="nc" id="L258">                        case HIGH -&gt; highRiskSeats++;</span>
+                    }
+                }
+            }
+        }
+        
+<span class="nc" id="L264">        dto.setSafeSeats(safeSeats);</span>
+<span class="nc" id="L265">        dto.setMediumRiskSeats(mediumRiskSeats);</span>
+<span class="nc" id="L266">        dto.setHighRiskSeats(highRiskSeats);</span>
+        
+<span class="nc" id="L268">        return dto;</span>
+    }
+    
+    private SeatDTO[][] convertToSeatDTOs(Seat[][] seats) {
+<span class="nc" id="L272">        int rows = seats.length;</span>
+<span class="nc" id="L273">        int cols = seats[0].length;</span>
+<span class="nc" id="L274">        SeatDTO[][] seatDtos = new SeatDTO[rows][cols];</span>
+        
+<span class="nc bnc" id="L276" title="All 2 branches missed.">        for (int i = 0; i &lt; rows; i++) {</span>
+<span class="nc bnc" id="L277" title="All 2 branches missed.">            for (int j = 0; j &lt; cols; j++) {</span>
+<span class="nc" id="L278">                Seat seat = seats[i][j];</span>
+<span class="nc" id="L279">                SeatDTO dto = new SeatDTO();</span>
+<span class="nc" id="L280">                dto.setRow(seat.getRow());</span>
+<span class="nc" id="L281">                dto.setCol(seat.getCol());</span>
+<span class="nc" id="L282">                dto.setRiskLevel(seat.getRiskLevel().name());</span>
+<span class="nc" id="L283">                dto.setRiskScore(seat.getRiskScore());</span>
+<span class="nc" id="L284">                dto.setColorCode(seat.getRiskLevel().getColorCode());</span>
+                
+<span class="nc bnc" id="L286" title="All 2 branches missed.">                if (seat.isOccupied()) {</span>
+<span class="nc" id="L287">                    dto.setStudent(convertToStudentDTO(seat.getStudent()));</span>
+                }
+                
+<span class="nc" id="L290">                seatDtos[i][j] = dto;</span>
+            }
+        }
+        
+<span class="nc" id="L294">        return seatDtos;</span>
+    }
+    
+    private StudentDTO convertToStudentDTO(Student student) {
+<span class="nc" id="L298">        StudentDTO dto = new StudentDTO();</span>
+<span class="nc" id="L299">        dto.setRollNo(student.getRollNo());</span>
+<span class="nc" id="L300">        dto.setName(student.getName());</span>
+<span class="nc" id="L301">        dto.setSubject(student.getSubject());</span>
+<span class="nc" id="L302">        return dto;</span>
+    }
+    
+    private HallDTO convertToHallDTO(ExamHall hall) {
+<span class="nc" id="L306">        HallDTO dto = new HallDTO();</span>
+<span class="nc" id="L307">        dto.setHallId(hall.getHallId());</span>
+<span class="nc" id="L308">        dto.setRows(hall.getRows());</span>
+<span class="nc" id="L309">        dto.setCols(hall.getCols());</span>
+<span class="nc" id="L310">        dto.setCapacity(hall.getCapacity());</span>
+<span class="nc" id="L311">        dto.setOccupiedSeats(hall.getOccupiedSeats());</span>
+<span class="nc" id="L312">        return dto;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

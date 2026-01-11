@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeatAllocationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Examination Anti-Cheating System</a> &gt; <a href="index.source.html" class="el_package">com.examseating.anticheating.service</a> &gt; <span class="el_source">SeatAllocationService.java</span></div><h1>SeatAllocationService.java</h1><pre class="source lang-java linenums">package com.examseating.anticheating.service;
+
+import com.examseating.anticheating.model.ExamHall;
+import com.examseating.anticheating.model.RiskLevel;
+import com.examseating.anticheating.model.Seat;
+import com.examseating.anticheating.model.Student;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+<span class="fc" id="L14">@Slf4j</span>
+<span class="fc" id="L15">public class SeatAllocationService {</span>
+    
+    /**
+     * Allocates seats using two-queue graph coloring algorithm
+     * Optimal placement first, then fallback placement for remaining students
+     */
+    public ExamHall allocateSeats(List&lt;Student&gt; students, ExamHall hall) {
+<span class="fc" id="L22">        log.info(&quot;Starting seat allocation for {} students in hall {}&quot;, students.size(), hall.getHallId());</span>
+        
+<span class="pc bpc" id="L24" title="1 of 2 branches missed.">        if (students.isEmpty()) {</span>
+<span class="nc" id="L25">            log.warn(&quot;No students to allocate&quot;);</span>
+<span class="nc" id="L26">            clearHall(hall);</span>
+<span class="nc" id="L27">            return hall;</span>
+        }
+        
+<span class="fc" id="L30">        clearHall(hall);</span>
+        
+<span class="fc bfc" id="L32" title="All 2 branches covered.">        if (students.size() &gt; hall.getCapacity()) {</span>
+<span class="fc" id="L33">            log.warn(&quot;Students ({}) exceed hall capacity ({})&quot;, students.size(), hall.getCapacity());</span>
+        }
+        
+        // Group students by subject and sort by frequency (descending)
+<span class="fc" id="L37">        Map&lt;String, List&lt;Student&gt;&gt; subjectGroups = students.stream()</span>
+<span class="fc" id="L38">                .collect(Collectors.groupingBy(Student::getSubject));</span>
+        
+        // Initialize two-queue system
+<span class="fc" id="L41">        Queue&lt;Student&gt; primaryQueue = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L42">        subjectGroups.entrySet().stream()</span>
+<span class="fc" id="L43">                .sorted((e1, e2) -&gt; Integer.compare(e2.getValue().size(), e1.getValue().size()))</span>
+<span class="fc" id="L44">                .forEach(entry -&gt; primaryQueue.addAll(entry.getValue()));</span>
+        
+<span class="fc" id="L46">        Queue&lt;Student&gt; retryQueue = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L47">        Seat[][] seats = hall.getSeats();</span>
+<span class="fc" id="L48">        int optimalPlacements = 0;</span>
+<span class="fc" id="L49">        int fallbackPlacements = 0;</span>
+        
+        // First pass: Optimal placement
+<span class="fc bfc" id="L52" title="All 4 branches covered.">        for (int row = 0; row &lt; hall.getRows() &amp;&amp; !primaryQueue.isEmpty(); row++) {</span>
+<span class="fc bfc" id="L53" title="All 4 branches covered.">            for (int col = 0; col &lt; hall.getCols() &amp;&amp; !primaryQueue.isEmpty(); col++) {</span>
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">                if (seats[row][col].isOccupied()) continue;</span>
+                
+<span class="fc" id="L56">                Student student = primaryQueue.poll();</span>
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">                if (student == null) break;</span>
+                
+<span class="fc bfc" id="L59" title="All 2 branches covered.">                if (isValidPlacement(seats, row, col, student)) {</span>
+<span class="fc" id="L60">                    seats[row][col].setStudent(student);</span>
+<span class="fc" id="L61">                    seats[row][col].setRiskLevel(RiskLevel.SAFE);</span>
+<span class="fc" id="L62">                    seats[row][col].setRiskScore(0.0);</span>
+<span class="fc" id="L63">                    optimalPlacements++;</span>
+<span class="fc" id="L64">                    log.debug(&quot;Assigned {} to seat ({}, {}) - optimal placement&quot;, student.getRollNo(), row, col);</span>
+<span class="fc" id="L65">                } else {</span>
+<span class="fc" id="L66">                    retryQueue.offer(student);</span>
+<span class="fc" id="L67">                    log.debug(&quot;Student {} deferred to retry queue&quot;, student.getRollNo());</span>
+                }
+            }
+        }
+        
+        // Second pass: Fallback placement
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        if (!retryQueue.isEmpty()) {</span>
+<span class="fc" id="L74">            log.info(&quot;Processing retry queue with {} students&quot;, retryQueue.size());</span>
+            
+<span class="fc bfc" id="L76" title="All 4 branches covered.">            for (int row = 0; row &lt; hall.getRows() &amp;&amp; !retryQueue.isEmpty(); row++) {</span>
+<span class="fc bfc" id="L77" title="All 4 branches covered.">                for (int col = 0; col &lt; hall.getCols() &amp;&amp; !retryQueue.isEmpty(); col++) {</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">                    if (!seats[row][col].isOccupied()) {</span>
+<span class="fc" id="L79">                        Student student = retryQueue.poll();</span>
+<span class="fc" id="L80">                        seats[row][col].setStudent(student);</span>
+<span class="fc" id="L81">                        seats[row][col].setRiskLevel(RiskLevel.SAFE);</span>
+<span class="fc" id="L82">                        seats[row][col].setRiskScore(0.0);</span>
+<span class="fc" id="L83">                        fallbackPlacements++;</span>
+<span class="fc" id="L84">                        log.debug(&quot;Assigned {} to seat ({}, {}) - fallback placement&quot;, student.getRollNo(), row, col);</span>
+                    }
+                }
+            }
+        }
+        
+<span class="fc" id="L90">        int totalAssigned = optimalPlacements + fallbackPlacements;</span>
+<span class="fc" id="L91">        int unallocated = students.size() - totalAssigned;</span>
+        
+<span class="fc" id="L93">        log.info(&quot;Allocation complete: {} total students&quot;, students.size());</span>
+<span class="fc" id="L94">        log.info(&quot;Optimal placements: {} ({}%)&quot;, optimalPlacements, </span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">                totalAssigned &gt; 0 ? (optimalPlacements * 100 / totalAssigned) : 0);</span>
+<span class="fc" id="L96">        log.info(&quot;Fallback placements: {} ({}%)&quot;, fallbackPlacements,</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">                totalAssigned &gt; 0 ? (fallbackPlacements * 100 / totalAssigned) : 0);</span>
+        
+<span class="fc bfc" id="L99" title="All 2 branches covered.">        if (unallocated &gt; 0) {</span>
+<span class="fc" id="L100">            log.warn(&quot;Unallocated students: {}&quot;, unallocated);</span>
+        }
+        
+<span class="fc" id="L103">        log.info(&quot;Final allocation rate: {}%&quot;, (totalAssigned * 100 / students.size()));</span>
+<span class="fc" id="L104">        return hall;</span>
+    }
+    
+    /**
+     * Generates random seating for baseline comparison
+     */
+    public ExamHall generateRandomSeating(List&lt;Student&gt; students, ExamHall hall) {
+<span class="fc" id="L111">        log.info(&quot;Generating random seating for {} students&quot;, students.size());</span>
+        
+        // Clear existing allocations
+<span class="fc" id="L114">        clearHall(hall);</span>
+        
+<span class="fc" id="L116">        List&lt;Student&gt; shuffledStudents = new ArrayList&lt;&gt;(students);</span>
+<span class="fc" id="L117">        Collections.shuffle(shuffledStudents);</span>
+        
+<span class="fc" id="L119">        Seat[][] seats = hall.getSeats();</span>
+<span class="fc" id="L120">        int studentIndex = 0;</span>
+        
+        // Fill seats row by row with shuffled students
+<span class="pc bpc" id="L123" title="1 of 4 branches missed.">        for (int row = 0; row &lt; hall.getRows() &amp;&amp; studentIndex &lt; shuffledStudents.size(); row++) {</span>
+<span class="pc bpc" id="L124" title="1 of 4 branches missed.">            for (int col = 0; col &lt; hall.getCols() &amp;&amp; studentIndex &lt; shuffledStudents.size(); col++) {</span>
+<span class="fc" id="L125">                seats[row][col].setStudent(shuffledStudents.get(studentIndex++));</span>
+<span class="fc" id="L126">                seats[row][col].setRiskLevel(RiskLevel.SAFE); // Will be recalculated</span>
+<span class="fc" id="L127">                seats[row][col].setRiskScore(0.0);</span>
+            }
+        }
+        
+<span class="fc" id="L131">        log.info(&quot;Random seating completed. Assigned {} students&quot;, studentIndex);</span>
+<span class="fc" id="L132">        return hall;</span>
+    }
+    
+    /**
+     * Checks if placing a student at given position is valid (no same-subject neighbors)
+     */
+    public boolean isValidPlacement(Seat[][] seats, int row, int col, Student student) {
+<span class="fc" id="L139">        List&lt;Seat&gt; neighbors = getAdjacentSeats(seats, row, col);</span>
+        
+<span class="fc bfc" id="L141" title="All 2 branches covered.">        for (Seat neighbor : neighbors) {</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">            if (neighbor.isOccupied() &amp;&amp; </span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">                neighbor.getStudent().getSubject().equals(student.getSubject())) {</span>
+<span class="fc" id="L144">                return false;</span>
+            }
+        }
+        
+<span class="fc" id="L148">        return true;</span>
+    }
+    
+    /**
+     * Returns list of 4-directional adjacent seats (up, down, left, right)
+     */
+    public List&lt;Seat&gt; getAdjacentSeats(Seat[][] seats, int row, int col) {
+<span class="fc" id="L155">        List&lt;Seat&gt; neighbors = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L156">        int rows = seats.length;</span>
+<span class="fc" id="L157">        int cols = seats[0].length;</span>
+        
+        // Directions: up, down, left, right
+<span class="fc" id="L160">        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};</span>
+        
+<span class="fc bfc" id="L162" title="All 2 branches covered.">        for (int[] dir : directions) {</span>
+<span class="fc" id="L163">            int newRow = row + dir[0];</span>
+<span class="fc" id="L164">            int newCol = col + dir[1];</span>
+            
+<span class="fc bfc" id="L166" title="All 8 branches covered.">            if (newRow &gt;= 0 &amp;&amp; newRow &lt; rows &amp;&amp; newCol &gt;= 0 &amp;&amp; newCol &lt; cols) {</span>
+<span class="fc" id="L167">                neighbors.add(seats[newRow][newCol]);</span>
+            }
+        }
+        
+<span class="fc" id="L171">        return neighbors;</span>
+    }
+    
+    /**
+     * Clears all seat assignments in the hall
+     */
+    public void clearHall(ExamHall hall) {
+<span class="fc" id="L178">        Seat[][] seats = hall.getSeats();</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        for (int row = 0; row &lt; hall.getRows(); row++) {</span>
+<span class="fc bfc" id="L180" title="All 2 branches covered.">            for (int col = 0; col &lt; hall.getCols(); col++) {</span>
+<span class="fc" id="L181">                seats[row][col].setStudent(null);</span>
+<span class="fc" id="L182">                seats[row][col].setRiskLevel(RiskLevel.SAFE);</span>
+<span class="fc" id="L183">                seats[row][col].setRiskScore(0.0);</span>
+            }
+        }
+<span class="fc" id="L186">        log.info(&quot;Cleared all seat assignments in hall {}&quot;, hall.getHallId());</span>
+<span class="fc" id="L187">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

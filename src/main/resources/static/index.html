@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Examination Anti-Cheating System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center mb-6">Smart Examination Anti-Cheating System</h1>
+        
+        <div class="three-panel-container">
+            <!-- Left Panel -->
+            <aside class="left-panel">
+                <div class="panel-content">
+                    <h2 class="text-xl font-semibold mb-4">Configuration</h2>
+                    
+                    <!-- CSV Upload Section -->
+                    <div class="section mb-6">
+                        <h3 class="text-lg font-medium mb-2">Upload Students</h3>
+                        <input type="file" id="csvFile" accept=".csv" class="w-full p-2 border rounded mb-2">
+                        <button id="uploadBtn" class="btn btn-secondary w-full mb-2">Upload CSV</button>
+                        <button id="demoBtn" class="btn btn-gray w-full">Load Demo Data</button>
+                    </div>
+                    
+                    <!-- Hall Configuration -->
+                    <div class="section mb-6">
+                        <h3 class="text-lg font-medium mb-2">Hall Setup</h3>
+                        <input type="text" id="hallId" placeholder="Hall ID" class="w-full p-2 border rounded mb-2">
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <input type="number" id="rows" placeholder="Rows" min="1" max="20" class="p-2 border rounded">
+                            <input type="number" id="cols" placeholder="Cols" min="1" max="20" class="p-2 border rounded">
+                        </div>
+                        <button id="createHallBtn" class="btn btn-secondary w-full">Create Hall</button>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="section">
+                        <h3 class="text-lg font-medium mb-2">Actions</h3>
+                        <button id="randomBtn" class="btn btn-gray w-full mb-2">Random Allocation</button>
+                        <button id="optimizeBtn" class="btn btn-primary w-full mb-2">Optimized Allocation</button>
+                        <button id="exportBtn" class="btn btn-green w-full mb-2">Export PDF</button>
+                        <button id="resetBtn" class="btn btn-red w-full">Reset</button>
+                    </div>
+                </div>
+            </aside>
+            
+            <!-- Center Panel -->
+            <main class="center-panel">
+                <div class="panel-content">
+                    <h2 class="text-xl font-semibold mb-4">Seating Arrangement</h2>
+                    <div id="seatingGrid" class="seat-grid-container">
+                        <p class="empty-state">Upload students and create hall to begin</p>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color safe"></div>
+                            <span>Safe</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color medium"></div>
+                            <span>Medium Risk</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color high"></div>
+                            <span>High Risk</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color empty"></div>
+                            <span>Empty</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            
+            <!-- Right Panel -->
+            <aside class="right-panel">
+                <div class="panel-content">
+                    <h2 class="text-xl font-semibold mb-4">Risk Analytics</h2>
+                    
+                    <!-- Current Metrics -->
+                    <div class="section mb-6">
+                        <div class="metric-grid">
+                            <div class="metric-card">
+                                <div class="metric-value" id="totalRisk">0%</div>
+                                <div class="metric-label">Total Risk</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value" id="conflicts">0</div>
+                                <div class="metric-label">Conflicts</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value" id="occupied">0</div>
+                                <div class="metric-label">Occupied</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value" id="utilization">0%</div>
+                                <div class="metric-label">Utilization</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Before/After Comparison -->
+                    <div class="section" id="comparisonSection" style="display: none;">
+                        <h3 class="text-lg font-medium mb-2">Comparison</h3>
+                        <div class="comparison-toggle mb-3">
+                            <button id="beforeBtn" class="toggle-btn active">Before (Random)</button>
+                            <button id="afterBtn" class="toggle-btn">After (Optimized)</button>
+                        </div>
+                        <div class="comparison-metrics">
+                            <div class="comparison-item">
+                                <span>Risk Reduction:</span>
+                                <span id="riskReduction" class="improvement">0%</span>
+                            </div>
+                            <div class="comparison-item">
+                                <span>Conflicts Reduced:</span>
+                                <span id="conflictReduction" class="improvement">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+    
+    <!-- Modal Dialog -->
+    <div id="studentModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Student Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="student-info">
+                    <div class="info-row">
+                        <span class="label">Roll No:</span>
+                        <span id="modalRollNo">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Name:</span>
+                        <span id="modalName">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Subject:</span>
+                        <span id="modalSubject">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Risk Level:</span>
+                        <span id="modalRiskLevel" class="risk-badge">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Risk Score:</span>
+                        <span id="modalRiskScore">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+    
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HallManagementService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Smart Examination Anti-Cheating System</a> &gt; <a href="index.source.html" class="el_package">com.examseating.anticheating.service</a> &gt; <span class="el_source">HallManagementService.java</span></div><h1>HallManagementService.java</h1><pre class="source lang-java linenums">package com.examseating.anticheating.service;
+
+import com.examseating.anticheating.model.ExamHall;
+import com.examseating.anticheating.model.Student;
+import com.examseating.anticheating.repository.HallRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+<span class="fc" id="L13">@Slf4j</span>
+<span class="fc" id="L14">@RequiredArgsConstructor</span>
+public class HallManagementService {
+    
+    private final HallRepository hallRepository;
+    
+    /**
+     * Distributes students across multiple halls using priority queue for optimal capacity utilization
+     */
+    public Map&lt;String, List&lt;Student&gt;&gt; distributeStudentsAcrossHalls(List&lt;Student&gt; students, List&lt;ExamHall&gt; halls) {
+<span class="fc" id="L23">        log.info(&quot;Distributing {} students across {} halls&quot;, students.size(), halls.size());</span>
+        
+<span class="fc bfc" id="L25" title="All 2 branches covered.">        if (students.isEmpty()) {</span>
+<span class="fc" id="L26">            log.warn(&quot;No students to distribute&quot;);</span>
+<span class="fc" id="L27">            return new HashMap&lt;&gt;();</span>
+        }
+        
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (halls.isEmpty()) {</span>
+<span class="fc" id="L31">            log.error(&quot;No halls available for distribution&quot;);</span>
+<span class="fc" id="L32">            throw new IllegalArgumentException(&quot;No halls available&quot;);</span>
+        }
+        
+        // Calculate total capacity
+<span class="fc" id="L36">        int totalCapacity = halls.stream().mapToInt(ExamHall::getCapacity).sum();</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">        if (students.size() &gt; totalCapacity) {</span>
+<span class="fc" id="L38">            log.warn(&quot;Students ({}) exceed total capacity ({})&quot;, students.size(), totalCapacity);</span>
+        }
+        
+        // Create priority queue ordered by available capacity (descending)
+<span class="fc" id="L42">        PriorityQueue&lt;HallCapacity&gt; hallQueue = new PriorityQueue&lt;&gt;((h1, h2) -&gt; </span>
+<span class="fc" id="L43">                Integer.compare(h2.availableCapacity, h1.availableCapacity));</span>
+        
+        // Initialize hall capacities
+<span class="fc" id="L46">        Map&lt;String, List&lt;Student&gt;&gt; distribution = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">        for (ExamHall hall : halls) {</span>
+<span class="fc" id="L48">            int availableCapacity = hall.getCapacity() - hall.getOccupiedSeats();</span>
+<span class="fc" id="L49">            hallQueue.offer(new HallCapacity(hall.getHallId(), availableCapacity));</span>
+<span class="fc" id="L50">            distribution.put(hall.getHallId(), new ArrayList&lt;&gt;());</span>
+<span class="fc" id="L51">        }</span>
+        
+        // Distribute students
+<span class="fc" id="L54">        List&lt;Student&gt; overflowStudents = new ArrayList&lt;&gt;();</span>
+        
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        for (Student student : students) {</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">            if (hallQueue.isEmpty()) {</span>
+<span class="fc" id="L58">                overflowStudents.add(student);</span>
+<span class="fc" id="L59">                continue;</span>
+            }
+            
+<span class="fc" id="L62">            HallCapacity hallCap = hallQueue.poll();</span>
+            
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">            if (hallCap.availableCapacity &gt; 0) {</span>
+<span class="fc" id="L65">                distribution.get(hallCap.hallId).add(student);</span>
+<span class="fc" id="L66">                hallCap.availableCapacity--;</span>
+                
+                // Re-insert if still has capacity
+<span class="fc bfc" id="L69" title="All 2 branches covered.">                if (hallCap.availableCapacity &gt; 0) {</span>
+<span class="fc" id="L70">                    hallQueue.offer(hallCap);</span>
+                }
+                
+<span class="fc" id="L73">                log.debug(&quot;Assigned student {} to hall {}&quot;, student.getRollNo(), hallCap.hallId);</span>
+            } else {
+<span class="nc" id="L75">                overflowStudents.add(student);</span>
+            }
+<span class="fc" id="L77">        }</span>
+        
+        // Handle overflow
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        if (!overflowStudents.isEmpty()) {</span>
+<span class="fc" id="L81">            log.warn(&quot;Could not assign {} students due to capacity constraints&quot;, overflowStudents.size());</span>
+<span class="fc" id="L82">            distribution.put(&quot;OVERFLOW&quot;, overflowStudents);</span>
+        }
+        
+        // Log distribution summary
+<span class="fc" id="L86">        distribution.forEach((hallId, assignedStudents) -&gt; {</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">            if (!&quot;OVERFLOW&quot;.equals(hallId)) {</span>
+<span class="fc" id="L88">                log.info(&quot;Hall {}: {} students assigned&quot;, hallId, assignedStudents.size());</span>
+            }
+<span class="fc" id="L90">        });</span>
+        
+<span class="fc" id="L92">        return distribution;</span>
+    }
+    
+    /**
+     * Creates a new exam hall and stores it in repository
+     */
+    public ExamHall createHall(String hallId, int rows, int cols) {
+<span class="fc" id="L99">        log.info(&quot;Creating new hall: {} with dimensions {}x{}&quot;, hallId, rows, cols);</span>
+        
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (hallRepository.existsById(hallId)) {</span>
+<span class="fc" id="L102">            log.error(&quot;Hall with ID {} already exists&quot;, hallId);</span>
+<span class="fc" id="L103">            throw new IllegalArgumentException(&quot;Hall with ID &quot; + hallId + &quot; already exists&quot;);</span>
+        }
+        
+<span class="fc bfc" id="L106" title="All 4 branches covered.">        if (rows &lt;= 0 || cols &lt;= 0) {</span>
+<span class="fc" id="L107">            log.error(&quot;Invalid hall dimensions: {}x{}&quot;, rows, cols);</span>
+<span class="fc" id="L108">            throw new IllegalArgumentException(&quot;Hall dimensions must be positive&quot;);</span>
+        }
+        
+<span class="fc" id="L111">        ExamHall hall = new ExamHall(hallId, rows, cols);</span>
+<span class="fc" id="L112">        ExamHall savedHall = hallRepository.save(hall);</span>
+        
+<span class="fc" id="L114">        log.info(&quot;Successfully created hall {} with capacity {}&quot;, hallId, hall.getCapacity());</span>
+<span class="fc" id="L115">        return savedHall;</span>
+    }
+    
+    /**
+     * Retrieves hall by ID
+     */
+    public ExamHall getHallById(String hallId) {
+<span class="fc" id="L122">        log.debug(&quot;Retrieving hall with ID: {}&quot;, hallId);</span>
+<span class="fc" id="L123">        ExamHall hall = hallRepository.findById(hallId);</span>
+        
+<span class="fc bfc" id="L125" title="All 2 branches covered.">        if (hall == null) {</span>
+<span class="fc" id="L126">            log.warn(&quot;Hall not found with ID: {}&quot;, hallId);</span>
+        }
+        
+<span class="fc" id="L129">        return hall;</span>
+    }
+    
+    /**
+     * Retrieves all halls
+     */
+    public List&lt;ExamHall&gt; getAllHalls() {
+<span class="fc" id="L136">        log.debug(&quot;Retrieving all halls&quot;);</span>
+<span class="fc" id="L137">        List&lt;ExamHall&gt; halls = hallRepository.findAll();</span>
+<span class="fc" id="L138">        log.info(&quot;Found {} halls&quot;, halls.size());</span>
+<span class="fc" id="L139">        return halls;</span>
+    }
+    
+    /**
+     * Deletes a hall by ID
+     */
+    public boolean deleteHall(String hallId) {
+<span class="fc" id="L146">        log.info(&quot;Deleting hall with ID: {}&quot;, hallId);</span>
+        
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        if (!hallRepository.existsById(hallId)) {</span>
+<span class="fc" id="L149">            log.warn(&quot;Cannot delete hall {}: not found&quot;, hallId);</span>
+<span class="fc" id="L150">            return false;</span>
+        }
+        
+<span class="fc" id="L153">        hallRepository.delete(hallId);</span>
+<span class="fc" id="L154">        log.info(&quot;Successfully deleted hall {}&quot;, hallId);</span>
+<span class="fc" id="L155">        return true;</span>
+    }
+    
+    /**
+     * Gets total capacity across all halls
+     */
+    public int getTotalCapacity() {
+<span class="fc" id="L162">        return getAllHalls().stream().mapToInt(ExamHall::getCapacity).sum();</span>
+    }
+    
+    /**
+     * Gets total occupied seats across all halls
+     */
+    public long getTotalOccupiedSeats() {
+<span class="fc" id="L169">        return getAllHalls().stream().mapToLong(ExamHall::getOccupiedSeats).sum();</span>
+    }
+    
+    /**
+     * Gets hall utilization statistics
+     */
+    public Map&lt;String, Object&gt; getHallStatistics() {
+<span class="fc" id="L176">        List&lt;ExamHall&gt; halls = getAllHalls();</span>
+        
+<span class="fc" id="L178">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L179">        stats.put(&quot;totalHalls&quot;, halls.size());</span>
+<span class="fc" id="L180">        stats.put(&quot;totalCapacity&quot;, getTotalCapacity());</span>
+<span class="fc" id="L181">        stats.put(&quot;totalOccupied&quot;, getTotalOccupiedSeats());</span>
+<span class="fc" id="L182">        stats.put(&quot;totalAvailable&quot;, getTotalCapacity() - getTotalOccupiedSeats());</span>
+        
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">        if (getTotalCapacity() &gt; 0) {</span>
+<span class="fc" id="L185">            stats.put(&quot;overallUtilization&quot;, (double) getTotalOccupiedSeats() / getTotalCapacity() * 100);</span>
+        } else {
+<span class="nc" id="L187">            stats.put(&quot;overallUtilization&quot;, 0.0);</span>
+        }
+        
+        // Individual hall stats
+<span class="fc" id="L191">        List&lt;Map&lt;String, Object&gt;&gt; hallStats = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L192" title="All 2 branches covered.">        for (ExamHall hall : halls) {</span>
+<span class="fc" id="L193">            Map&lt;String, Object&gt; hallStat = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L194">            hallStat.put(&quot;hallId&quot;, hall.getHallId());</span>
+<span class="fc" id="L195">            hallStat.put(&quot;capacity&quot;, hall.getCapacity());</span>
+<span class="fc" id="L196">            hallStat.put(&quot;occupied&quot;, hall.getOccupiedSeats());</span>
+<span class="fc" id="L197">            hallStat.put(&quot;available&quot;, hall.getCapacity() - hall.getOccupiedSeats());</span>
+<span class="pc bpc" id="L198" title="1 of 2 branches missed.">            hallStat.put(&quot;utilization&quot;, hall.getCapacity() &gt; 0 ? </span>
+<span class="pc" id="L199">                    (double) hall.getOccupiedSeats() / hall.getCapacity() * 100 : 0.0);</span>
+<span class="fc" id="L200">            hallStats.add(hallStat);</span>
+<span class="fc" id="L201">        }</span>
+<span class="fc" id="L202">        stats.put(&quot;hallDetails&quot;, hallStats);</span>
+        
+<span class="fc" id="L204">        return stats;</span>
+    }
+    
+    /**
+     * Helper class for priority queue operations
+     */
+    private static class HallCapacity {
+        String hallId;
+        int availableCapacity;
+        
+<span class="fc" id="L214">        HallCapacity(String hallId, int availableCapacity) {</span>
+<span class="fc" id="L215">            this.hallId = hallId;</span>
+<span class="fc" id="L216">            this.availableCapacity = availableCapacity;</span>
+<span class="fc" id="L217">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

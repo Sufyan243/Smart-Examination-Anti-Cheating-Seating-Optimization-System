@@ -58,7 +58,11 @@ public class RestAPIIntegrationTest {
 
         SeatingRequestDTO request = new SeatingRequestDTO();
         request.setHallId("TEST_HALL_3");
-        request.setStudentIds(Arrays.asList("S001", "S002", "S003"));
+        request.setStudents(Arrays.asList(
+            new StudentDTO("S001", "Alice", "Math"),
+            new StudentDTO("S002", "Bob", "Physics"),
+            new StudentDTO("S003", "Charlie", "Chemistry")
+        ));
 
         mockMvc.perform(post("/api/seating/optimize")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -72,7 +76,7 @@ public class RestAPIIntegrationTest {
     public void testHallNotFoundError() throws Exception {
         SeatingRequestDTO request = new SeatingRequestDTO();
         request.setHallId("NON_EXISTENT_HALL");
-        request.setStudentIds(Arrays.asList("S001"));
+        request.setStudents(Arrays.asList(new StudentDTO("S001", "Alice", "Math")));
 
         mockMvc.perform(post("/api/seating/optimize")
                 .contentType(MediaType.APPLICATION_JSON)

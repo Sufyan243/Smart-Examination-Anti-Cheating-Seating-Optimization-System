@@ -26,6 +26,7 @@ class SeatingApp {
         
         // Other actions
         document.getElementById('exportBtn').addEventListener('click', () => this.handleExportPDF());
+        document.getElementById('admitCardsBtn').addEventListener('click', () => this.handleGenerateAdmitCards());
         document.getElementById('resetBtn').addEventListener('click', () => this.handleReset());
         
         // Modal events
@@ -291,6 +292,52 @@ class SeatingApp {
             this.showToast('PDF exported successfully', 'success');
         } catch (error) {
             this.showToast(`PDF export failed: ${error.message}`, 'error');
+        } finally {
+            this.setLoading(false);
+        }
+    }
+    
+    // Handle admit cards generation
+    async handleGenerateAdmitCards() {
+        if (!this.currentHall) {
+            this.showToast('Please create a hall first', 'error');
+            return;
+        }
+        
+        const currentData = this.currentView === 'before' ? this.beforeData : this.afterData;
+        if (!currentData) {
+            this.showToast('Please allocate seats first', 'error');
+            return;
+        }
+        
+        // Prompt for exam details
+        const examDate = prompt('Enter exam date (e.g., 2024-01-15):', new Date().toISOString().split('T')[0]);
+        if (!examDate) return;
+        
+        const examTime = prompt('Enter exam time (e.g., 10:00 AM - 12:00 PM):', '10:00 AM - 12:00 PM');
+        if (!examTime) return;
+        
+        this.setLoading(true);
+        
+        try {
+            const url = `/api/admit-cards/bulk/${this.currentHall.hallId}?examDate=${encodeURIComponent(examDate)}&examTime=${encodeURIComponent(examTime)}`;
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to generate admit cards');
+            
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `admit_cards_${this.currentHall.hallId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+            
+            this.showToast('Admit cards generated successfully', 'success');
+        } catch (error) {
+            this.showToast(`Admit card generation failed: ${error.message}`, 'error');
         } finally {
             this.setLoading(false);
         }

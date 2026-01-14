@@ -100,6 +100,15 @@
     background-color: #6b7280;
 }
 
+.btn-purple {
+    background-color: #8b5cf6;
+    color: white;
+}
+
+.btn-purple:hover:not(:disabled) {
+    background-color: #7c3aed;
+}
+
 /* Seat Grid Styles */
 .seat-grid-container {
     display: flex;

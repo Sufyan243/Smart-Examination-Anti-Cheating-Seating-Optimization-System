@@ -59,9 +59,9 @@ public class RestAPIIntegrationTest {
         SeatingRequestDTO request = new SeatingRequestDTO();
         request.setHallId("TEST_HALL_3");
         request.setStudents(Arrays.asList(
-            new StudentDTO("S001", "Alice", "Math"),
-            new StudentDTO("S002", "Bob", "Physics"),
-            new StudentDTO("S003", "Charlie", "Chemistry")
+            createStudentDTO("2024F-BSE-025", "Alice", "DSA"),
+            createStudentDTO("2024F-BSE-075", "Bob", "OOP"),
+            createStudentDTO("2024F-BSE-125", "Charlie", "SRE")
         ));
 
         mockMvc.perform(post("/api/seating/optimize")
@@ -76,7 +76,7 @@ public class RestAPIIntegrationTest {
     public void testHallNotFoundError() throws Exception {
         SeatingRequestDTO request = new SeatingRequestDTO();
         request.setHallId("NON_EXISTENT_HALL");
-        request.setStudents(Arrays.asList(new StudentDTO("S001", "Alice", "Math")));
+        request.setStudents(Arrays.asList(createStudentDTO("2024F-BSE-025", "Alice", "DSA")));
 
         mockMvc.perform(post("/api/seating/optimize")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -94,5 +94,14 @@ public class RestAPIIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidHall)))
                 .andExpect(status().isBadRequest());
+    }
+    
+    private StudentDTO createStudentDTO(String rollNo, String name, String subject) {
+        StudentDTO dto = new StudentDTO();
+        dto.setRollNo(rollNo);
+        dto.setName(name);
+        dto.setSubject(subject);
+        dto.populateFromFullRollNo();
+        return dto;
     }
 }

@@ -74,6 +74,27 @@ public class PDFExportService {
         );
         
         document.add(new Paragraph(metadata).setFontSize(10));
+        
+        // Add batch and section statistics
+        if (hall.getSeats() != null) {
+            Map<String, Integer> batchStats = new java.util.HashMap<>();
+            Map<String, Integer> sectionStats = new java.util.HashMap<>();
+            
+            for (int row = 0; row < hall.getRows(); row++) {
+                for (int col = 0; col < hall.getCols(); col++) {
+                    Seat seat = hall.getSeats()[row][col];
+                    if (seat.isOccupied() && seat.getStudent().getBatch() != null) {
+                        batchStats.merge(seat.getStudent().getBatch(), 1, Integer::sum);
+                        sectionStats.merge(seat.getStudent().getSection(), 1, Integer::sum);
+                    }
+                }
+            }
+            
+            if (!batchStats.isEmpty()) {
+                document.add(new Paragraph("Batch Distribution: " + batchStats.toString()).setFontSize(10));
+                document.add(new Paragraph("Section Distribution: " + sectionStats.toString()).setFontSize(10));
+            }
+        }
     }
     
     private void renderSeatGrid(Document document, ExamHall hall) {
@@ -88,11 +109,17 @@ public class PDFExportService {
                 String seatLabel = String.valueOf((char)('A' + row)) + (col + 1);
                 
                 if (seat.isOccupied()) {
-                    String content = String.format("%s\n%s\n%s\n%s",
+                    String batchSection = "";
+                    if (seat.getStudent().getBatch() != null && seat.getStudent().getSection() != null) {
+                        batchSection = seat.getStudent().getBatch() + "-" + seat.getStudent().getSection();
+                    }
+                    
+                    String content = String.format("%s\n%s\n%s\n%s\n%s",
                             seatLabel,
                             seat.getStudent().getRollNo(),
                             seat.getStudent().getName(),
-                            seat.getStudent().getSubject());
+                            seat.getStudent().getSubject(),
+                            batchSection);
                     cell.add(new Paragraph(content).setFontSize(8));
                     
                     // Apply risk-based coloring

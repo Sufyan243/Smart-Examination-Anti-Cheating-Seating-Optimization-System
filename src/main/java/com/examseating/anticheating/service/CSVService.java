@@ -2,6 +2,7 @@ package com.examseating.anticheating.service;
 
 import com.examseating.anticheating.exception.*;
 import com.examseating.anticheating.model.Student;
+import com.examseating.anticheating.util.UniversityRollNumberValidator;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvException;
 import lombok.extern.slf4j.Slf4j;
@@ -90,8 +91,10 @@ public class CSVService {
         String name = row[1].trim();
         String subject = row[2].trim();
         
-        if (rollNo.isEmpty() || !rollNo.matches("[A-Za-z0-9]+")) {
-            throw new CSVRowValidationException("Invalid roll number format (must be alphanumeric)", lineNumber, "RollNo");
+        try {
+            UniversityRollNumberValidator.validateComplete(rollNo);
+        } catch (InvalidRollNumberFormatException e) {
+            throw new CSVRowValidationException(e.getMessage(), lineNumber, "RollNo");
         }
         
         if (name.isEmpty()) {
@@ -115,11 +118,38 @@ public class CSVService {
     public byte[] generateSampleCSV() {
         StringBuilder csv = new StringBuilder();
         csv.append("RollNo,Name,Subject\n");
-        csv.append("S001,Alice Johnson,Mathematics\n");
-        csv.append("S002,Bob Smith,Physics\n");
-        csv.append("S003,Charlie Brown,Chemistry\n");
-        csv.append("S004,Diana Prince,Biology\n");
-        csv.append("S005,Eve Wilson,Computer Science\n");
+        
+        // Comprehensive examples covering all sections and both batches
+        csv.append("2024F-BSE-001,Alice Johnson,DSA\n");
+        csv.append("2024F-BSE-025,Bob Smith,Discrete Mathematics\n");
+        csv.append("2023S-BSE-050,Carol Davis,Communication Skills\n");
+        csv.append("2024F-BSE-051,David Wilson,SRE\n");
+        csv.append("2023S-BSE-075,Emma Brown,OOP\n");
+        csv.append("2024F-BSE-100,Frank Miller,Database Systems\n");
+        csv.append("2023S-BSE-101,Grace Lee,Web Engineering\n");
+        csv.append("2024F-BSE-125,Henry Taylor,DSA\n");
+        csv.append("2023S-BSE-150,Ivy Chen,Discrete Mathematics\n");
+        csv.append("2024F-BSE-151,Jack Anderson,Communication Skills\n");
+        csv.append("2023S-BSE-175,Kate Thompson,SRE\n");
+        csv.append("2024F-BSE-200,Liam Garcia,OOP\n");
+        csv.append("2023S-BSE-201,Maya Patel,Database Systems\n");
+        csv.append("2024F-BSE-225,Noah Rodriguez,Web Engineering\n");
+        csv.append("2023S-BSE-250,Olivia Martinez,DSA\n");
+        csv.append("2024F-BSE-251,Paul Jackson,Discrete Mathematics\n");
+        csv.append("2023S-BSE-275,Quinn White,Communication Skills\n");
+        csv.append("2024F-BSE-300,Ruby Harris,SRE\n");
+        csv.append("2023S-BSE-015,Sam Clark,OOP\n");
+        csv.append("2024F-BSE-065,Tina Lewis,Database Systems\n");
+        csv.append("2023S-BSE-115,Uma Singh,Web Engineering\n");
+        csv.append("2024F-BSE-165,Victor Chen,DSA\n");
+        csv.append("2023S-BSE-215,Wendy Park,Discrete Mathematics\n");
+        csv.append("2024F-BSE-265,Xavier Kim,Communication Skills\n");
+        csv.append("2023S-BSE-035,Yara Ahmed,SRE\n");
+        csv.append("2024F-BSE-085,Zoe Brown,OOP\n");
+        csv.append("2023S-BSE-135,Alex Turner,Database Systems\n");
+        csv.append("2024F-BSE-185,Beth Wilson,Web Engineering\n");
+        csv.append("2023S-BSE-235,Chris Lee,DSA\n");
+        csv.append("2024F-BSE-285,Dana Miller,Discrete Mathematics\n");
         
         return csv.toString().getBytes();
     }

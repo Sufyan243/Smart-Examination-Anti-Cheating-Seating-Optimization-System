@@ -306,7 +306,7 @@ neighbors.forEach(neighbor => {
 
 ---
 
-## 🎨 Visual Algorithm Representation
+##  Visual Algorithm Representation
 
 ### Graph Coloring Visualization:
 ```
@@ -326,7 +326,7 @@ Risk: HIGH          Risk: SAFE
 
 ---
 
-## 🧪 Testing Algorithms
+##  Testing Algorithms
 
 **Files:** `src/test/java/com/examseating/anticheating/service/`
 
@@ -338,7 +338,7 @@ Risk: HIGH          Risk: SAFE
 
 ---
 
-## 📈 Scalability Considerations
+##  Scalability Considerations
 
 ### Current Limits:
 - **Students:** 1000 per CSV (configurable)
@@ -353,7 +353,7 @@ Risk: HIGH          Risk: SAFE
 
 ---
 
-## 🎯 Key Algorithm Benefits
+##  Key Algorithm Benefits
 
 1. **Graph Coloring:** Ensures optimal anti-cheating placement
 2. **Priority Queue:** Balanced multi-hall distribution  

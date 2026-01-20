@@ -104,7 +104,11 @@ public class SeatingController {
         
         // Convert StudentDTOs to Student objects with real subjects and names
         List<Student> students = request.getStudents().stream()
-                .map(dto -> new Student(dto.getRollNo(), dto.getName(), dto.getSubject()))
+                .map(dto -> {
+                    dto.populateFromFullRollNo();
+                    return new Student(dto.getRollNo(), dto.getName(), dto.getSubject(), 
+                                     dto.getBatch(), dto.getDepartment(), dto.getSection(), dto.getRollNumber());
+                })
                 .toList();
         
         if (students.size() > hall.getCapacity()) {
@@ -130,7 +134,11 @@ public class SeatingController {
         
         // Convert StudentDTOs to Student objects with real subjects and names
         List<Student> students = request.getStudents().stream()
-                .map(dto -> new Student(dto.getRollNo(), dto.getName(), dto.getSubject()))
+                .map(dto -> {
+                    dto.populateFromFullRollNo();
+                    return new Student(dto.getRollNo(), dto.getName(), dto.getSubject(), 
+                                     dto.getBatch(), dto.getDepartment(), dto.getSection(), dto.getRollNumber());
+                })
                 .toList();
         
         if (students.size() > hall.getCapacity()) {
@@ -179,7 +187,11 @@ public class SeatingController {
             
             // Convert DTOs to domain objects
             List<Student> students = request.getStudents().stream()
-                    .map(dto -> new Student(dto.getRollNo(), dto.getName(), dto.getSubject()))
+                    .map(dto -> {
+                        dto.populateFromFullRollNo();
+                        return new Student(dto.getRollNo(), dto.getName(), dto.getSubject(), 
+                                         dto.getBatch(), dto.getDepartment(), dto.getSection(), dto.getRollNumber());
+                    })
                     .toList();
             
             // Allocate seats
@@ -299,6 +311,10 @@ public class SeatingController {
         dto.setRollNo(student.getRollNo());
         dto.setName(student.getName());
         dto.setSubject(student.getSubject());
+        dto.setBatch(student.getBatch());
+        dto.setDepartment(student.getDepartment());
+        dto.setSection(student.getSection());
+        dto.setRollNumber(student.getRollNumber());
         return dto;
     }
     

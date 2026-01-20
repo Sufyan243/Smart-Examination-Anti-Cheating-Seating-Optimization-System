@@ -73,6 +73,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(false, "Row validation failed", ex.getMessage(), ex.getLineNumber()));
     }
     
+    @ExceptionHandler(InvalidRollNumberFormatException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRollNumberFormat(InvalidRollNumberFormatException ex) {
+        log.error("Invalid roll number format - Roll: {}, Reason: {}", ex.getRollNumber(), ex.getReason());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(false, "Invalid roll number format", ex.getMessage()));
+    }
+    
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
         log.error("File too large: {}", ex.getMessage());

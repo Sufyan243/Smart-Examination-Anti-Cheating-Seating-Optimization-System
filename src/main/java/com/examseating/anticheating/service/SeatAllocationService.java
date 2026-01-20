@@ -14,10 +14,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SeatAllocationService {
     
-    /**
-     * Allocates seats using two-queue graph coloring algorithm
-     * Optimal placement first, then fallback placement for remaining students
-     */
     public ExamHall allocateSeats(List<Student> students, ExamHall hall) {
         log.info("Starting seat allocation for {} students in hall {}", students.size(), hall.getHallId());
         

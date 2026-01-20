@@ -5,22 +5,39 @@ Algorithm visualization + decision system for intelligent exam seat allocation u
 
 ## Technology Stack
 - **Backend**: Java 17, Spring Boot 3.2.x
-- **Frontend**: HTML, CSS, JavaScript, Tailwind CSS
-- **Build Tool**: Maven
+- **Frontend**: React 19, Vite, Tailwind CSS
+- **Build Tool**: Maven with frontend-maven-plugin
 - **Libraries**: Apache POI (CSV), iText (PDF), Lombok
 
 ## Project Structure
 - `model/` - Domain models (Student, Seat, ExamHall)
 - `service/` - Core DSA algorithms
 - `controller/` - REST API endpoints
-- `static/` - Frontend UI
+- `src/main/resources/frontend/` - React + Vite frontend
+- `src/main/resources/static/` - Built frontend assets (auto-generated)
 
 ## Running the Application
+
+### Production Build (Recommended)
 ```bash
-mvn clean install
+mvn clean package
 mvn spring-boot:run
 ```
 Access at: http://localhost:8080
+
+### Development Mode
+**Backend:**
+```bash
+mvn spring-boot:run
+```
+
+**Frontend (separate terminal):**
+```bash
+cd src/main/resources/frontend
+npm install
+npm run dev
+```
+Frontend dev server: http://localhost:5173 (proxies API to backend)
 
 ## Exhibition Pitch
 
